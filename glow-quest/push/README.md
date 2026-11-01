@@ -33,6 +33,7 @@ isn't to-the-minute.
 
 - **After changing reminders** in the app (times, messages, days), tap *Create push setup code*
   again and update the `PUSH_CONFIG` secret. The sender only knows what that secret says.
+- **Monthly report:** on the last day of each month the sender pushes the "Mission Report is ready" alert. Tapping it opens the app, which builds the PDF on the phone (her data is never uploaded). If your `PUSH_CONFIG` was created before this feature existed, create it again so it includes the report reminder.
 - The sender can't see her logs, so "skip if already logged" only applies to in-app alerts.
   Server alerts always arrive.
 - The "period incoming" alert uses the prediction saved in the code. It rolls forward by the average cycle,

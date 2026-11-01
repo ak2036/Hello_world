@@ -3,7 +3,7 @@ importScripts('reminders-core.js');
 
 const CACHE = 'hero-quest-v1';
 const STATE_URL = new URL('__reminder-state', self.registration.scope).href;
-const SHELL = ['./', './index.html', './reminders-core.js', './manifest.webmanifest', './icons/icon-192.png'];
+const SHELL = ['./', './index.html', './reminders-core.js', './manifest.webmanifest', './icons/icon-192.png', './vendor/jspdf.umd.min.js'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();

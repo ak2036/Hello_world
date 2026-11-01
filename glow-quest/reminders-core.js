@@ -8,6 +8,7 @@
     panther: 'Black Panther', hulk: 'Hulk', strange: 'Doctor Strange', thor: 'Thor',
     marvel: 'Captain Marvel', ironman: 'Iron Man', cap: 'Captain America', sugaros: 'Sugaros',
   };
+  const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const pad = n => String(n).padStart(2, '0');
   const parse = k => { const [y, m, d] = k.split('-').map(Number); return Date.UTC(y, m - 1, d); };
@@ -26,7 +27,7 @@
   }
 
   const fill = (text, ctx) => String(text || '')
-    .replace(/\{n\}/g, ctx.name || 'Agent').replace(/\{d\}/g, ctx.d ?? '').replace(/\{date\}/g, ctx.date ?? '');
+    .replace(/\{month\}/g, ctx.month ?? '').replace(/\{n\}/g, ctx.name || 'Agent').replace(/\{d\}/g, ctx.d ?? '').replace(/\{date\}/g, ctx.date ?? '');
 
   /** If the stored prediction is in the past, roll it forward by the average cycle (server-side configs go stale). */
   function projectNext(next, avg, todayKey) {
@@ -48,6 +49,13 @@
       if (parts.mins < at || parts.mins - at > grace) continue;
       if ((state.lastFired || {})[r.id] === parts.key) continue;
       const ctx = { name: state.name };
+      let tab = r.tab || 'home';
+      if (r.type === 'report') {
+        // monthly report: only on the last day of the month; tapping opens that month's PDF
+        if (addDays(parts.key, 1).slice(8) !== '01') continue;
+        ctx.month = FULL_MONTHS[+parts.key.slice(5, 7) - 1];
+        tab = 'report-' + parts.key.slice(0, 7);
+      }
       if (r.type === 'periodSoon') {
         const next = projectNext(state.nextPeriod, state.avgCycle, parts.key);
         if (!next) continue;
@@ -56,7 +64,7 @@
         ctx.d = d; ctx.date = niceDate(next);
       }
       if (r.skip && ((state.done || {})[r.type] || []).includes(parts.key)) continue;
-      out.push({ id: r.id, key: parts.key, hero: r.hero || 'fury', tab: r.tab || 'home',
+      out.push({ id: r.id, key: parts.key, hero: r.hero || 'fury', tab,
         title: `${HERO_NAMES[r.hero] || 'Hero Quest'} · ${fill(r.title, ctx)}`, body: fill(r.body, ctx) });
     }
     return out;
