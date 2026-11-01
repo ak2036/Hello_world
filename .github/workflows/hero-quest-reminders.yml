@@ -1,0 +1,48 @@
+name: Hero Quest reminders
+
+# Sends Hero Quest reminders as push notifications even when the app is closed.
+# Does nothing until the repository variable HERO_PUSH_ENABLED is set to "true".
+# Setup: glow-quest/push/README.md
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: hero-quest-reminders
+  cancel-in-progress: false
+
+jobs:
+  send:
+    if: vars.HERO_PUSH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: glow-quest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Restore "already sent" state
+        uses: actions/cache/restore@v4
+        with:
+          path: .push-state
+          key: hero-push-state-${{ github.run_id }}
+          restore-keys: hero-push-state-
+      - name: Install web-push
+        run: npm install --no-save --no-audit --no-fund --prefix glow-quest/push web-push@3.6.7
+      - name: Send due reminders
+        env:
+          PUSH_CONFIG: ${{ secrets.PUSH_CONFIG }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+        run: node glow-quest/push/send-reminders.mjs
+      - name: Save "already sent" state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .push-state
+          key: hero-push-state-${{ github.run_id }}

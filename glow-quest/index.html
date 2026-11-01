@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hero Quest">
 <title>Ankitha's Hero Quest</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -39,7 +41,7 @@ input,select{font:inherit;color:var(--ink)}
 /* header */
 header{position:relative;z-index:1;padding:18px 0 6px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.title{margin:0;font-size:1.75rem;line-height:1;text-shadow:2px 2px 0 var(--red)}
+.title{margin:0;font-size:clamp(1.25rem,6.2vw,1.75rem);line-height:1;text-shadow:2px 2px 0 var(--red)}
 .title small{display:block;font-family:Rajdhani;letter-spacing:0;text-shadow:none;font-size:.85rem;color:var(--muted);font-weight:600;margin-top:4px}
 .gear{width:42px;height:42px;border-radius:50%;background:var(--card-2);border:1px solid var(--line);box-shadow:var(--shadow);font-size:1.2rem;flex:none}
 .levelcard{margin-top:12px;background:linear-gradient(120deg,#b3141a,#e62429 45%,#7a0f12);color:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:0 12px 30px rgba(230,36,41,.35);position:relative;overflow:hidden;border:1px solid rgba(255,212,92,.35)}
@@ -253,6 +255,32 @@ nav button.on .e{transform:translateY(-2px) scale(1.15)}
 .tc-sub{font-family:Bangers;letter-spacing:.2em;color:var(--gold);font-size:1.1rem}
 .tc-flash{position:fixed;inset:0;background:#fff;pointer-events:none;animation:flash .6s ease-out forwards}
 @keyframes flash{from{opacity:.7}to{opacity:0}}
+.hdr-btns{display:flex;gap:8px;flex:none}
+.notif-status{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);border-radius:14px;padding:12px;font-weight:600;font-size:.95rem}
+.notif-status .btn{margin-top:10px}
+.rem{display:flex;align-items:center;gap:8px;padding:8px;border-radius:14px;background:var(--card);border:1px solid var(--line);margin-bottom:8px;transition:opacity .2s}
+.rem.off{opacity:.5}
+.rem-main{flex:1;min-width:0;display:flex;align-items:center;gap:8px;text-align:left;padding:0}
+.rem-main > div{min-width:0}
+.rem-main b{display:block;font-family:Bangers;font-weight:400;letter-spacing:.05em;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rem-main span{display:block;font-size:.75rem;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rem-time{width:112px;padding:7px 6px;font-size:.85rem;flex:none}
+.switch{position:relative;width:46px;height:26px;flex:none;margin:0!important;cursor:pointer}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch i{position:absolute;inset:0;border-radius:99px;background:#2a3350;transition:.2s}
+.switch i:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.switch input:checked + i{background:var(--red)}
+.switch input:checked + i:after{transform:translateX(20px)}
+.adv{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.adv summary{font-weight:700;cursor:pointer}
+.heropick{display:flex;flex-wrap:wrap;gap:6px}
+.heropick button{border-radius:50%;padding:0;opacity:.4;transition:all .15s}
+.heropick button.on{opacity:1;transform:scale(1.1)}
+textarea.field{resize:vertical;font:inherit}
+.sheet label.chk{display:flex;align-items:center;gap:10px;text-transform:none;letter-spacing:0;color:var(--ink);font-size:.95rem;margin-top:14px}
+.chk input{width:20px;height:20px;accent-color:var(--red)}
+.toast.hero{display:flex;align-items:center;gap:10px;border-radius:16px;max-width:520px;text-align:left;font-weight:600;line-height:1.3}
+.toast.hero .av{border-width:2px}
 </style>
 </head>
 <body>
@@ -262,7 +290,7 @@ nav button.on .e{transform:translateY(-2px) scale(1.15)}
   <header>
     <div class="top">
       <h1 class="title" id="appTitle">Hero Quest ⚡<small id="greet"></small></h1>
-      <button class="gear" data-act="settings" aria-label="Settings">⚙️</button>
+      <div class="hdr-btns"><button class="gear" data-act="alerts" aria-label="Reminders">🔔</button><button class="gear" data-act="settings" aria-label="Settings">⚙️</button></div>
     </div>
     <div class="levelcard" id="levelcard"></div>
   </header>
@@ -275,18 +303,32 @@ nav button.on .e{transform:translateY(-2px) scale(1.15)}
 <div class="toasts" id="toasts"></div>
 <input type="file" id="importFile" accept="application/json" hidden>
 
+<script src="reminders-core.js"></script>
 <script>
 (() => {
 'use strict';
 
 /* ---------------- storage ---------------- */
 const STORE = 'glowquest.v1'; // kept so existing data carries over
+const DEFAULT_REMINDERS = () => {
+  const all = [0,1,2,3,4,5,6];
+  return [
+    {id:'sugar',   type:'sugar',      on:true,  time:'20:30', days:all, hero:'hulk',    tab:'home',   skip:true, title:'Sugar Smash check-in', body:'HULK ASK: did {n} smash sugar today? Log it!'},
+    {id:'sleepLog',type:'sleep',      on:true,  time:'09:00', days:all, hero:'cap',     tab:'home',   skip:true, title:'Recharge report',      body:'Morning, soldier. How did you sleep? Log it for +20 XP.'},
+    {id:'cycle',   type:'cycle',      on:true,  time:'21:00', days:all, hero:'strange', tab:'home',   skip:true, title:'Status report',        body:'The Time Stone needs today\'s update. How are you feeling, {n}?'},
+    {id:'bedtime', type:'custom',     on:true,  time:'22:30', days:all, hero:'cap',     tab:'sleep',  title:'Lights out soon',      body:'Phone down in 30 minutes, {n}. Shield up for tomorrow 🛡️'},
+    {id:'period',  type:'periodSoon', on:true,  time:'09:00', days:all, hero:'strange', tab:'cycle',  offset:2, title:'Period incoming', body:'I foresee your period in about {d} days (~{date}). Pack the emergency kit 🎒'},
+    {id:'movie',   type:'custom',     on:true,  time:'19:30', days:[6], hero:'spidey',  tab:'movies', title:'Movie night!',         body:'It\'s movie night! Spin the wheel for tonight\'s mission 🍿'},
+    {id:'water',   type:'custom',     on:false, time:'15:00', days:all, hero:'fury',    tab:'home',   title:'Hydration check',      body:'Agent {n}, drink a glass of water. That\'s an order 💧'},
+  ];
+};
 const DEFAULT = {
   settings:{ name:'Ankitha', cycleLen:28, sleepGoal:8 },
   period:{},   // 'YYYY-MM-DD': {flow:'none|spotting|light|medium|heavy', symptoms:[], mood:''}
   sugar:{},    // 'YYYY-MM-DD': 'free' | 'slip'
   sleep:{},    // 'YYYY-MM-DD' (morning you woke up): {bed:'23:00', wake:'07:00', q:1-5}
   movies:[],   // {id,title,genre,addedAt,watched,watchedAt,rating}
+  notify:{ enabled:false, reminders:DEFAULT_REMINDERS(), lastFired:{}, vapid:'' },
   meta:{ lastXP:null, lastLevel:null, seenBadges:[], storySeen:false }
 };
 let S;
@@ -295,6 +337,7 @@ function load(){
   S = Object.assign(structuredClone(DEFAULT), S || {});
   S.settings = Object.assign({}, DEFAULT.settings, S.settings);
   S.meta = Object.assign({}, DEFAULT.meta, S.meta);
+  S.notify = Object.assign({ enabled:false, reminders:DEFAULT_REMINDERS(), lastFired:{}, vapid:'' }, S.notify);
 }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
 
@@ -549,9 +592,11 @@ const SYMPTOMS = ['Cramps','Headache','Bloating','Back pain','Acne','Tired','Cra
 const MOODS = ['😎','😊','😐','😢','😤','😴'];
 
 /* ---------------- effects ---------------- */
-function toast(msg){
-  const t = document.createElement('div'); t.className='toast'; t.innerHTML = msg;
-  document.getElementById('toasts').appendChild(t); setTimeout(()=>t.remove(), 3000);
+function toast(msg, cls=''){
+  const t = document.createElement('div'); t.className = 'toast ' + cls; t.innerHTML = msg;
+  const life = cls === 'hero' ? 7000 : 3000;
+  t.style.animationDelay = `0s, ${(life-600)/1000}s`;
+  document.getElementById('toasts').appendChild(t); setTimeout(()=>t.remove(), life);
 }
 function confetti(n=26){
   const E = ['⚡','💥','⭐','🛡️','🔨','💎','🕷️','🔥'];
@@ -589,12 +634,12 @@ function celebrate(){
   }
   S.meta.lastXP = xp; S.meta.lastLevel = L; S.meta.seenBadges = got; save();
 }
-function commit(){ save(); celebrate(); render(); }
+function commit(){ save(); celebrate(); render(); syncReminderState(); }
 
 /* ---------------- sheet ---------------- */
 const sheetbg = document.getElementById('sheetbg'), sheet = document.getElementById('sheet');
 function openSheet(html){ sheet.innerHTML = html; sheetbg.classList.add('open'); }
-function closeSheet(){ sheetbg.classList.remove('open'); sheet.innerHTML=''; }
+function closeSheet(){ sheetbg.classList.remove('open'); sheet.innerHTML=''; sheet.onchange = null; }
 sheetbg.addEventListener('click', e => { if(e.target===sheetbg) closeSheet(); });
 
 /* ---------------- render: header & nav ---------------- */
@@ -981,6 +1026,7 @@ function settingsSheet(){
     <button class="btn block" data-d="save">Save</button>
     <label style="margin-top:20px">Backup 💾 <span style="font-weight:600">(data is saved only on this device)</span></label>
     <div class="row"><button class="btn soft" style="flex:1" data-d="export">Export</button><button class="btn soft" style="flex:1" data-d="import">Import</button></div>
+    <button class="btn block" style="margin-top:14px" data-d="alerts">🔔 Reminders & notifications</button>
     <button class="btn lav block" style="margin-top:14px" data-d="story">🎬 Replay story intro</button>
     <button class="btn soft block" style="margin-top:14px;color:var(--red-2)" data-d="reset">Reset everything</button>`);
   sheet.onclick = e => {
@@ -998,6 +1044,7 @@ function settingsSheet(){
       a.download = `hero-quest-backup-${today()}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
     }
     if(d==='import') document.getElementById('importFile').click();
+    if(d==='alerts'){ remindersSheet(); return; }
     if(d==='story'){ sheet.onclick=null; closeSheet(); playStory(); }
     if(d==='reset' && confirm('Delete ALL data? This cannot be undone (no time travel here)')){
       S = structuredClone(DEFAULT); sheet.onclick=null; closeSheet(); save(); celebrate(); render();
@@ -1025,6 +1072,7 @@ document.addEventListener('click', e => {
     case 'tab': tab = el.dataset.tab; render(); window.scrollTo({top:0,behavior:'smooth'}); break;
     case 'close': closeSheet(); break;
     case 'settings': settingsSheet(); break;
+    case 'alerts': remindersSheet(); break;
     case 'mentor': { const id = el.dataset.hero; mentorTaps[id] = (mentorTaps[id]||0)+1; const b = el.parentElement.querySelector('.bubble'); b.innerHTML = pickLine(id, dayIdx()+mentorTaps[id]); el.classList.remove('zap'); void el.offsetWidth; el.classList.add('zap'); break; }
     case 'pet': { const b = el.parentElement.querySelector('.bubble'); b.textContent = PET_LINES[Math.floor(Math.random()*PET_LINES.length)]; confetti(6); break; }
     case 'sugar': if(S.sugar[k]===el.dataset.v) delete S.sugar[k]; else S.sugar[k] = el.dataset.v; commit(); break;
@@ -1040,6 +1088,203 @@ document.addEventListener('click', e => {
     case 'spin': spin(); break;
   }
 });
+
+/* ---------------- reminders & notifications ---------------- */
+const RCACHE = 'hero-quest-v1';
+const STATE_URL = new URL('__reminder-state', location.href).href;
+const DAYNAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const REM_TYPES = {sugar:'Sugar check-in', sleep:'Sleep log', cycle:'Cycle check-in', periodSoon:'Period heads-up', custom:'Custom'};
+const TAB_NAMES = {home:'HQ', cycle:'Cycle', sugar:'Sugar', sleep:'Sleep', movies:'Movies', badges:'Badges'};
+const canNotify = () => 'Notification' in window;
+const hasSW = () => 'serviceWorker' in navigator && /^https?:$/.test(location.protocol);
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const daysLabel = d => { const s = [...d].sort().join(''); return s==='0123456'?'Every day':s==='12345'?'Weekdays':s==='06'?'Weekends':!d.length?'No days':d.slice().sort().map(i=>DAYNAMES[i]).join(', '); };
+
+function reminderSnapshot(){
+  const t = today(), recent = [addDays(t,-1), t, addDays(t,1)], ci = cycleInfo();
+  return { enabled:S.notify.enabled, name:S.settings.name, reminders:S.notify.reminders, lastFired:S.notify.lastFired,
+    done:{ sugar:recent.filter(k=>S.sugar[k]), sleep:recent.filter(k=>S.sleep[k]), cycle:recent.filter(k=>S.period[k]) },
+    nextPeriod: ci.none ? null : ci.next, avgCycle: ci.avg };
+}
+async function readCachedState(){
+  try{ if(!('caches' in window)) return null; const r = await (await caches.open(RCACHE)).match(STATE_URL); return r ? await r.json() : null; }catch(e){ return null; }
+}
+function mergeFired(c){ if(!c || !c.lastFired) return; for(const [id,k] of Object.entries(c.lastFired)) if(!S.notify.lastFired[id] || S.notify.lastFired[id] < k) S.notify.lastFired[id] = k; }
+// The service worker can't read localStorage, so it gets a copy of the reminder settings via the Cache API.
+async function syncReminderState(){
+  try{
+    if(!('caches' in window)) return;
+    mergeFired(await readCachedState());
+    await (await caches.open(RCACHE)).put(STATE_URL, new Response(JSON.stringify(reminderSnapshot()), {headers:{'content-type':'application/json'}}));
+  }catch(e){}
+}
+async function showNote(n){
+  const opts = { body:n.body, tag:`hq-${n.id}-${n.key||''}`, renotify:false, icon:`icons/hero-${n.hero}.png`, badge:'icons/badge-96.png', data:{tab:n.tab}, vibrate:[120,60,120] };
+  let shown = false;
+  if(canNotify() && Notification.permission === 'granted'){
+    try{
+      const reg = hasSW() ? await navigator.serviceWorker.getRegistration() : null;
+      if(reg) await reg.showNotification(n.title, opts); else new Notification(n.title, opts);
+      shown = true;
+    }catch(e){}
+  }
+  if(!shown && document.visibilityState === 'visible') toast(`${av(n.hero,34)}<span><b>${esc(n.title)}</b><br>${esc(n.body)}</span>`, 'hero');
+}
+let checking = false;
+async function checkReminders(){
+  if(checking || !S.notify.enabled) return;
+  checking = true;
+  try{
+    mergeFired(await readCachedState());
+    const parts = HeroReminders.localParts(new Date());
+    const list = HeroReminders.due(reminderSnapshot(), parts, 180);
+    for(const n of list){ await showNote(n); S.notify.lastFired[n.id] = parts.key; }
+    if(list.length){ save(); await syncReminderState(); }
+  } finally { checking = false; }
+}
+// Mark reminders whose time already passed today as done, so turning alerts on doesn't fire a burst of old ones.
+function seedFired(ids){
+  const parts = HeroReminders.localParts(new Date());
+  HeroReminders.due(reminderSnapshot(), parts, 24*60).forEach(n => { if(!ids || ids.includes(n.id)) S.notify.lastFired[n.id] = parts.key; });
+}
+async function registerPeriodic(){
+  try{
+    if(!hasSW()) return;
+    const reg = await navigator.serviceWorker.ready;
+    if(!('periodicSync' in reg)) return;
+    const st = await navigator.permissions.query({name:'periodic-background-sync'});
+    if(st.state === 'granted') await reg.periodicSync.register('hero-reminders', {minInterval: 15*60*1000});
+  }catch(e){}
+}
+async function enableNotifications(){
+  if(!canNotify()){ toast('This browser can\'t show notifications 😕'); return; }
+  const p = await Notification.requestPermission();
+  if(p !== 'granted'){ toast('Notifications were not allowed'); remindersSheet(); return; }
+  S.notify.enabled = true; seedFired(); save(); await syncReminderState(); registerPeriodic();
+  remindersSheet(); toast('Mission alerts online ⚡');
+  showNote({id:'welcome', key:today(), hero:'fury', tab:'home', title:'Nick Fury · Alerts online', body:`Agent ${S.settings.name}, HQ can now reach you. Stay sharp.`});
+}
+function notifStatus(){
+  if(location.protocol === 'file:') return {msg:'📍 Open Hero Quest from its web address (e.g. GitHub Pages) to get phone notifications. Until then, reminders pop up inside the app while it\'s open.', enableInApp:true};
+  if(isIOS && !standalone()) return {msg:'📱 On iPhone: tap <b>Share → Add to Home Screen</b>, then open Hero Quest from the home screen and come back here to turn on notifications.', enableInApp:true};
+  if(!canNotify()) return {msg:'This browser doesn\'t support notifications. Reminders will pop up inside the app while it\'s open.', enableInApp:true};
+  if(Notification.permission === 'denied') return {msg:'🚫 Notifications are blocked. Allow them for this site in your browser settings, then come back.'};
+  if(Notification.permission !== 'granted' || !S.notify.enabled) return {msg:'Let your Avengers ping you when it\'s mission time.', btn:true};
+  return {msg:'✅ Mission alerts are <b>ON</b>', on:true};
+}
+function remindersSheet(){
+  const st = notifStatus();
+  openSheet(`<h3 class="fred">🔔 Mission Alerts</h3>
+    <div class="notif-status">${st.msg}
+      ${st.btn ? '<button class="btn block" data-r="enable">🔔 Turn on notifications</button>' : ''}
+      ${st.enableInApp && !S.notify.enabled ? '<button class="btn soft block" data-r="inapp">Turn on in-app reminders</button>' : ''}
+      ${st.on || (st.enableInApp && S.notify.enabled) ? `<div class="row" style="margin-top:10px"><button class="btn sm soft" data-r="test">Send a test</button><button class="btn sm soft" data-r="off">Pause all</button></div>` : ''}
+    </div>
+    <label>Your reminders <span style="font-weight:600;text-transform:none;letter-spacing:0">· tap one to customise</span></label>
+    ${S.notify.reminders.map(r=>`<div class="rem ${r.on?'':'off'}">
+      <button class="rem-main" data-r="edit" data-id="${r.id}">${av(r.hero,40)}<div><b>${esc(r.title)}</b><span>${daysLabel(r.days)}${r.type==='periodSoon'?` · ${r.offset}d before`:''}</span></div></button>
+      <input type="time" class="field rem-time" data-r="time" data-id="${r.id}" value="${r.time}" aria-label="Time">
+      <label class="switch"><input type="checkbox" data-r="toggle" data-id="${r.id}" ${r.on?'checked':''} aria-label="On/off"><i></i></label>
+    </div>`).join('')}
+    <button class="btn soft block" data-r="add">＋ Add custom reminder</button>
+    <details class="adv"><summary>📡 Alerts when the app is fully closed (advanced)</summary>
+      <p class="small muted" style="font-weight:600">Phones pause web apps in the background, so the most reliable alerts come from a tiny free sender that runs on GitHub every 15 minutes. One-time setup — follow <b>glow-quest/push/README.md</b>. Re-create the code after changing reminders.</p>
+      <label>VAPID public key</label><input class="field" id="vapid" value="${esc(S.notify.vapid||'')}" placeholder="B…" autocomplete="off">
+      <button class="btn lav block" style="margin-top:10px" data-r="pushcfg">📋 Create push setup code</button>
+      <textarea class="field" id="pushOut" rows="4" readonly style="display:none;margin-top:10px;font-size:.75rem"></textarea>
+    </details>
+    <p class="disc">Reminders arrive while Hero Quest is open or in the background (on Android, installed apps also get occasional background checks). Mission reminders skip themselves if you've already logged that day.</p>`);
+  sheet.onclick = async e => {
+    const b = e.target.closest('[data-r]'); if(!b || b.tagName === 'INPUT') return;
+    const r = S.notify.reminders.find(x=>x.id===b.dataset.id);
+    switch(b.dataset.r){
+      case 'enable': enableNotifications(); break;
+      case 'inapp': S.notify.enabled = true; seedFired(); save(); syncReminderState(); remindersSheet(); toast('In-app reminders on ⚡'); break;
+      case 'off': S.notify.enabled = false; save(); syncReminderState(); remindersSheet(); toast('Alerts paused'); break;
+      case 'test': showNote({id:'test', key:String(Date.now()), hero:'spidey', tab:'home', title:'Spider-Man · Test transmission', body:`Hey ${S.settings.name}! If you can see this, alerts work 🕸️`}); break;
+      case 'edit': reminderEdit(r); break;
+      case 'add': reminderEdit({id:'c'+Date.now().toString(36), type:'custom', on:true, time:'12:00', days:[0,1,2,3,4,5,6], hero:'fury', title:'New mission', body:'Agent {n}, ', tab:'home'}, true); break;
+      case 'pushcfg': makePushConfig(); break;
+    }
+  };
+  sheet.onchange = e => {
+    const el = e.target, r = S.notify.reminders.find(x=>x.id===el.dataset.id); if(!r) return;
+    if(el.dataset.r === 'toggle'){ r.on = el.checked; el.closest('.rem').classList.toggle('off', !r.on); }
+    if(el.dataset.r === 'time' && el.value){ r.time = el.value; seedFired([r.id]); }
+    save(); syncReminderState();
+  };
+}
+function reminderEdit(orig, isNew){
+  const r = JSON.parse(JSON.stringify(orig));
+  const heroes = ROSTER;
+  openSheet(`<h3 class="fred">${isNew?'＋ New reminder':'✎ Edit reminder'}</h3>
+    <label>Sent by</label>
+    <div class="heropick">${heroes.map(id=>`<button class="${r.hero===id?'on':''}" data-e="hero" data-v="${id}" title="${HEROES[id].n}">${av(id,40)}</button>`).join('')}</div>
+    <label>Title</label><input class="field" id="rTitle" maxlength="40" value="${esc(r.title)}">
+    <label>Message</label><textarea class="field" id="rBody" rows="3" maxlength="160">${esc(r.body)}</textarea>
+    <div class="small muted" style="font-weight:600;margin-top:4px">Tip: {n} = your name${r.type==='periodSoon'?', {d} = days left, {date} = predicted date':''}</div>
+    <div class="grid2">
+      <div><label>Time</label><input class="field" type="time" id="rTime" value="${r.time}"></div>
+      ${r.type==='periodSoon' ? `<div><label>Days before</label><input class="field" type="number" id="rOff" min="0" max="10" value="${r.offset}"></div>`
+        : `<div><label>Opens</label><select class="field" id="rTab">${Object.entries(TAB_NAMES).map(([k,v])=>`<option value="${k}" ${r.tab===k?'selected':''}>${v}</option>`).join('')}</select></div>`}
+    </div>
+    ${r.type==='periodSoon' ? '' : `<label>Days</label><div>${DAYNAMES.map((d,i)=>`<button class="chip ${r.days.includes(i)?'on':''}" data-e="day" data-v="${i}">${d}</button>`).join('')}</div>`}
+    ${['sugar','sleep','cycle'].includes(r.type) ? `<label class="chk"><input type="checkbox" id="rSkip" ${r.skip?'checked':''}> Skip if I've already logged it that day</label>` : ''}
+    <div class="row" style="margin-top:18px">
+      ${r.type==='custom' && !isNew ? '<button class="btn soft" data-e="del">Delete</button>' : '<button class="btn soft" data-e="back">Back</button>'}
+      <button class="btn soft" data-e="test">Test</button>
+      <button class="btn" style="flex:1" data-e="save">Save</button>
+    </div>`);
+  const read = () => {
+    r.title = sheet.querySelector('#rTitle').value.trim() || 'Reminder';
+    r.body = sheet.querySelector('#rBody').value.trim();
+    r.time = sheet.querySelector('#rTime').value || r.time;
+    const off = sheet.querySelector('#rOff'); if(off) r.offset = Math.max(0, Math.min(10, +off.value || 0));
+    const tb = sheet.querySelector('#rTab'); if(tb) r.tab = tb.value;
+    const sk = sheet.querySelector('#rSkip'); if(sk) r.skip = sk.checked;
+  };
+  sheet.onchange = null;
+  sheet.onclick = e => {
+    const b = e.target.closest('[data-e]'); if(!b) return;
+    const v = b.dataset.v;
+    if(b.dataset.e === 'hero'){ r.hero = v; sheet.querySelectorAll('.heropick button').forEach(x=>x.classList.toggle('on', x.dataset.v===v)); }
+    if(b.dataset.e === 'day'){ const i = +v; r.days = r.days.includes(i) ? r.days.filter(x=>x!==i) : [...r.days, i].sort(); b.classList.toggle('on'); }
+    if(b.dataset.e === 'test'){ read(); const ci = cycleInfo();
+      const ctx = {name:S.settings.name, d:r.offset, date: ci.none ? '—' : nice(ci.next)};
+      showNote({id:'test-'+r.id, key:String(Date.now()), hero:r.hero, tab:r.tab, title:`${HEROES[r.hero].n} · ${HeroReminders.fill(r.title, ctx)}`, body:HeroReminders.fill(r.body, ctx)}); }
+    if(b.dataset.e === 'back') remindersSheet();
+    if(b.dataset.e === 'del'){ S.notify.reminders = S.notify.reminders.filter(x=>x.id!==r.id); save(); syncReminderState(); remindersSheet(); }
+    if(b.dataset.e === 'save'){
+      read();
+      if(r.type !== 'periodSoon' && !r.days.length){ toast('Pick at least one day 📅'); return; }
+      const i = S.notify.reminders.findIndex(x=>x.id===r.id);
+      if(i >= 0) S.notify.reminders[i] = r; else S.notify.reminders.push(r);
+      seedFired([r.id]); save(); syncReminderState(); remindersSheet(); toast('Reminder saved ⚡');
+    }
+  };
+}
+const b64ToBytes = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function makePushConfig(){
+  const key = (sheet.querySelector('#vapid').value || '').trim();
+  S.notify.vapid = key; save();
+  if(!hasSW() || !('PushManager' in window)){ toast('Push needs the app opened from its web address (and on iPhone, from the home screen)'); return; }
+  if(!key){ toast('Paste the VAPID public key first 🔑'); return; }
+  if(Notification.permission !== 'granted'){ await enableNotifications(); if(Notification.permission !== 'granted') return; }
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(sub){ const cur = sub.options && sub.options.applicationServerKey; const want = b64ToBytes(key);
+      if(!cur || new Uint8Array(cur).join() !== want.join()){ await sub.unsubscribe(); sub = null; } }
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(key)});
+    const snap = reminderSnapshot();
+    const cfg = { v:1, tz:Intl.DateTimeFormat().resolvedOptions().timeZone, name:snap.name, nextPeriod:snap.nextPeriod, avgCycle:snap.avgCycle,
+      reminders:S.notify.reminders.filter(r=>r.on), subscription:sub.toJSON() };
+    const out = sheet.querySelector('#pushOut'); out.style.display = 'block'; out.value = JSON.stringify(cfg);
+    try{ await navigator.clipboard.writeText(out.value); toast('Copied! Paste it into the PUSH_CONFIG secret 📋'); }catch(e){ out.select(); toast('Copy the code below into the PUSH_CONFIG secret'); }
+  }catch(err){ toast('Couldn\'t subscribe: ' + esc(err.message || err)); }
+}
+
 document.addEventListener('submit', e => {
   if(e.target.id !== 'movieForm') return;
   e.preventDefault();
@@ -1056,6 +1301,16 @@ document.getElementById('sparkles').innerHTML = Array.from({length:14},(_,i)=>
   `<span style="left:${Math.random()*100}%;top:${Math.random()*100}%;font-size:${.8+Math.random()*1.2}rem;animation-delay:${-Math.random()*9}s">${['⭐','⚡','✦','⭐','💫'][i%5]}</span>`).join('');
 load(); celebrate(); render();
 if(!S.meta.storySeen) playStory();
+const qtab = new URLSearchParams(location.search).get('tab');
+if(qtab && VIEWS[qtab]){ tab = qtab; render(); }
+if(hasSW()){
+  navigator.serviceWorker.register('sw.js').then(() => { syncReminderState(); if(S.notify.enabled) registerPeriodic(); }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('message', e => { if(e.data && e.data.type==='open-tab' && VIEWS[e.data.tab]){ tab = e.data.tab; closeSheet(); render(); } });
+}
+syncReminderState();
+setTimeout(checkReminders, 1500);
+setInterval(checkReminders, 30000);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState==='visible') checkReminders(); });
 // re-render after midnight so "today" stays fresh
 setInterval(() => { if(document.visibilityState==='visible' && !sheetbg.classList.contains('open')) render(); }, 60000);
 })();
