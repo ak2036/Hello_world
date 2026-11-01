@@ -9,6 +9,8 @@ An Avengers-inspired, game-style tracker (dark HQ look, red & gold, hero ranks) 
 - **💪 Sugar cut** – daily sugar-free check-in, streaks, a 30-day "Gauntlet" and a calendar.
 - **💤 Sleep** – bedtime/wake time + energy rating, 7-night chart and good-sleep streaks.
 - **🎬 Movies** – watch list, mark watched, rate with stars, and a "spin for tonight's mission" picker.
+- **🎬 Story mode** – a comic-style intro on first launch (replay from ⚙️): the villain *Sugaros, the Snack Titan* threatens Earth and Nick Fury recruits Ankitha.
+- **🦸 Avengers** – each tab has a mentor (Nick Fury, Doctor Strange, Hulk, Captain America, Spider-Man, Thor); every level-up recruits a new Avenger to her team, and XP drains Sugaros' boss HP bar. Character art is original emblem-style SVG fan art.
 - **🎮 Game layer** – XP, hero ranks (Rookie Recruit → Earth's Mightiest Hero), an evolving hero avatar, daily missions, a Mission Complete bonus and 15 hero badges.
 
 **Use it:** open `glow-quest/index.html` in a browser (or turn on GitHub Pages and open it on her phone → "Add to Home Screen").
